@@ -21,18 +21,27 @@ distance: distance in cm
 
 rospy.init_node("testing")
 rospy.sleep(2.0)
-robot = baxter.BaxterRobot(rate=100, arm="left")
+robot_left = baxter.BaxterRobot(rate=100, arm="left")
 rospy.sleep(2.0)
+robot_right = baxter.BaxterRobot(rate=100, arm="right")
 
-robot.set_robot_state(True)
+robot_left.set_robot_state(True)
+robot_right.set_robot_state(True)
+
+print(robot_left._endpoint_state.pose.position)
+robot_right.gripper_calibrate()
+robot_right.gripper_prepare_to_grip()
+robot_right.move_to_neutral()
+robot_left.move_to_neutral()
 
 reverse_operation = None
+
+object_positions = [[0.7829306320888794, 0.2939874955968246, 0.1827199408116185], [0.6839650164218424, 0.08158967511950699, 0.2476260224906196], [0.6858101478459308, -0.0700958564708805, 0.26235887693132587], [0.6695379643138924, -0.19581662422156422, 0.26987945530784874]]
 
 
 def rotation(direction, angle):
     global reverse_operation
-    angles = robot.joint_angle()
-    print(angles)
+    angles = robot_left.joint_angle()
     angle = np.deg2rad(angle)
     if direction == "wrist_cw":
         angles["left_w2"] += angle
@@ -50,14 +59,14 @@ def rotation(direction, angle):
         print("Invalid direction")
         return
     for i in range(30):
-        robot.set_joint_position(angles)
+        robot_left.set_joint_position(angles)
         rospy.sleep(0.2)
     
 
 def movement(direction, distance):
     global reverse_operation
-    p = robot._endpoint_state.pose.position
-    q = robot._endpoint_state.pose.orientation
+    p = robot_left._endpoint_state.pose.position
+    q = robot_left._endpoint_state.pose.orientation
     distance = distance / 100
     if direction == "up":
         p.z += distance
@@ -80,9 +89,38 @@ def movement(direction, distance):
     else:
         print("Invalid direction")
         return
-    robot.set_cartesian_position([p.x, p.y, p.z], [ q.x, q.y, q.z, q.w])
+    robot_left.set_cartesian_position([p.x, p.y, p.z], [ q.x, q.y, q.z, q.w])
+    
 
-
+def grip(object_position):
+    global robot_right, robot_left
+    #robot_left.move_to_neutral()
+    go_to_object(object_position, "right")
+    """
+    robot_right.set_cartesian_position([object_position[0], object_position[1], object_position[2] - 0.4], [0,1,0,0])
+    rospy.sleep(2.0)
+    robot_right.gripper_grip()
+    rospy.sleep(2.0)
+    robot_right.set_cartesian_position([object_position[0], object_position[1], object_position[2]], [0,1,0,0])
+    rospy.sleep(2.0)
+    robot_right.set_cartesian_position([object_position[0], object_position[1], object_position[2] - 0.4], [0,1,0,0])
+    rospy.sleep(2.0)
+    robot_right.gripper_release()
+    rospy.sleep(2.0)
+    robot_right.set_cartesian_position([object_position[0], object_position[1], object_position[2]], [0,1,0,0])
+    rospy.sleep(2.0)
+    robot_right.move_to_neutral()
+    """
+    
+def go_to_object(object_position, arm):
+    global robot_right, robot_left
+    if arm == "left":
+        robot = robot_left
+    else:
+        robot = robot_right
+    robot.set_cartesian_position(object_position, [0,1,0,0])
+    rospy.sleep(2.0)
+    
 while True:
     command = input("Enter command: ")
     if command == "exit":
@@ -99,13 +137,15 @@ while True:
         movement(direction, distance)
     elif move == "reverse":
         if reverse_operation[0] == "rotate":
-            print(reverse_operation)
             rotation(reverse_operation[1], reverse_operation[2])
         elif reverse_operation[0] == "move":
             movement(reverse_operation[1], reverse_operation[2])
+    elif move == "grip":
+        grip(object_positions[int(command[1])])
+    elif move == "move_sensor":
+        go_to_object(object_positions[int(command[1])], "left")
     else:
         print("Invalid command")
         continue
-
 
 
