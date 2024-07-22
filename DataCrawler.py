@@ -32,18 +32,18 @@ robot_right = baxter.BaxterRobot(rate=100, arm="right")
 robot_left.set_robot_state(True)
 robot_right.set_robot_state(True)
 
+server, connection, address = speckleRobotServer.startServer()
+
 
 robot_right.gripper_calibrate()
 robot_right.gripper_prepare_to_grip()
+print(robot_left._endpoint_state.pose.position)
 robot_right.move_to_neutral()
 robot_left.move_to_neutral()
 
 reverse_operation = None
 
-object_positions = [[0.7829306320888794, 0.2939874955968246, 0.1827199408116185],
-                    [0.6839650164218424, 0.08158967511950699, 0.2476260224906196],
-                    [0.6858101478459308, -0.0700958564708805, 0.26235887693132587],
-                    [0.6695379643138924, -0.19581662422156422, 0.26987945530784874]]
+object_positions = [[0.7202440738293987, 0.30346615561828016, 0.1914454910919908]]
 
 
 def rotation(direction, angle):
@@ -65,7 +65,7 @@ def rotation(direction, angle):
     else:
         print("Invalid direction")
         return
-    for i in range(30):
+    for i in range(5): # maximum rotation angle is 60 degrees for 5
         robot_left.set_joint_position(angles)
         rospy.sleep(0.2)
 
@@ -154,15 +154,22 @@ while True:
         go_to_object(object_positions[int(command[1])], "left")
 
     elif move == "create_dataset":
+        start_time = rospy.get_time()
         dataset_folder = 'SpeckleRobotDataset'
-        material_type = 'pencilcase_cloth'
+        material_type = command[1] #'real_lemon'
 
-        server, connection, address = speckleRobotServer.startServer()
+        
         currentShotCount = 1
 
         fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+        if not os.path.exists(f'{dataset_folder}'):
+            os.makedirs(f'{dataset_folder}')
+        if not os.path.exists(f'{dataset_folder}/{material_type}'):
+            os.makedirs(f'{dataset_folder}/{material_type}')
+
         speckleRobotServer.receiveShot(connection, fileName)
         currentShotCount += 1
+        fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
 
         for i in range(9):
             rotation("wrist_cw", 5)
@@ -213,37 +220,137 @@ while True:
         movement("left", 2)
 
         for i in range(4):
-            movement("forward", 0.5)
+            movement("forward", 0.25)
             speckleRobotServer.receiveShot(connection, fileName)
             currentShotCount += 1
             fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
             for i in range(5):
+                rotation("extend_arm", 0.2)
+                speckleRobotServer.receiveShot(connection, fileName)
+                currentShotCount += 1
+                fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+            rotation("flex_arm", 1)
+
+        movement("backward", 1)
+
+        for i in range(4):
+            movement("backward", 0.25)
+            speckleRobotServer.receiveShot(connection, fileName)
+            currentShotCount += 1
+            fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+            for i in range(5):
+                rotation("flex_arm", 0.2)
+                speckleRobotServer.receiveShot(connection, fileName)
+                currentShotCount += 1
+                fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+            rotation("extend_arm", 1)
+
+        movement("forward", 1)
+
+        print(f"DATASET FINISHED IN {(rospy.get_time() - start_time) / 60} MINUTES")
+    
+    
+    
+    
+    elif move == "dataset_test":
+        start_time = rospy.get_time()
+        dataset_folder = 'SpeckleRobotDataset'
+        material_type = command[1] #'real_apple'
+
+        
+        currentShotCount = 1
+
+        fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+        if not os.path.exists(f'{dataset_folder}'):
+            os.makedirs(f'{dataset_folder}')
+        if not os.path.exists(f'{dataset_folder}/{material_type}'):
+            os.makedirs(f'{dataset_folder}/{material_type}')
+
+        speckleRobotServer.receiveShot(connection, fileName)
+        currentShotCount += 1
+        fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+        for i in range(2):
+            rotation("wrist_cw", 15)
+            speckleRobotServer.receiveShot(connection, fileName)
+            currentShotCount += 1
+            fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+        rotation("wrist_ccw", 30)
+
+        for i in range(2):
+            rotation("wrist_ccw", 15)
+            speckleRobotServer.receiveShot(connection, fileName)
+            currentShotCount += 1
+            fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+        rotation("wrist_cw", 30)
+
+        for i in range(2):
+            movement("left", 1)
+            speckleRobotServer.receiveShot(connection, fileName)
+            currentShotCount += 1
+            fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+            for i in range(2):
+                rotation("wrist_cw", 15)
+                speckleRobotServer.receiveShot(connection, fileName)
+                currentShotCount += 1
+                fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+            rotation("wrist_ccw", 30)
+
+        movement("right", 2)
+
+        for i in range(2):
+            movement("right", 1)
+            speckleRobotServer.receiveShot(connection, fileName)
+            currentShotCount += 1
+            fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+            for i in range(2):
+                rotation("wrist_ccw", 15)
+                speckleRobotServer.receiveShot(connection, fileName)
+                currentShotCount += 1
+                fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+
+            rotation("wrist_cw", 30)
+
+        movement("left", 2)
+
+        for i in range(1):
+            movement("forward", 1)
+            speckleRobotServer.receiveShot(connection, fileName)
+            currentShotCount += 1
+            fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
+            for i in range(1):
                 rotation("extend_arm", 1)
                 speckleRobotServer.receiveShot(connection, fileName)
                 currentShotCount += 1
                 fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
 
-            rotation("flex_arm", 5)
+            rotation("flex_arm", 1)
 
-        movement("backward", 2)
+        movement("backward", 1)
 
-        for i in range(4):
-            movement("backward", 0.5)
+        for i in range(1):
+            movement("backward", 1)
             speckleRobotServer.receiveShot(connection, fileName)
             currentShotCount += 1
             fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
-            for i in range(5):
+            for i in range(1):
                 rotation("flex_arm", 1)
                 speckleRobotServer.receiveShot(connection, fileName)
                 currentShotCount += 1
                 fileName = f'{dataset_folder}/{material_type}/{material_type}_{currentShotCount}.jpg'
 
-            rotation("extend_arm", 5)
+            rotation("extend_arm", 1)
 
-        movement("forward", 2)
+        movement("forward", 1)
 
-        print("DATASET FINISHED")
+        print(f"DATASET FINISHED IN {(rospy.get_time() - start_time) / 60} MINUTES")
     else:
         print("Invalid command")
         continue
-
